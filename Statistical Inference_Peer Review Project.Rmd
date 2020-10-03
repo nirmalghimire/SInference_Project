@@ -1,0 +1,222 @@
+---
+title: "Statistical Inference Peer Reviewed Project"
+author: "Nirmal Ghimire"
+date: "10/3/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+## Overview: 
+This is a class project for Statistical Inference Course in Data Science Certification Program through John Hopkins University. This project conducts thousands of simulations of data of exponential distribution in R and assess how their means and variance compare with the theoretical ones. The second half of the project analyzes the ToothGrowth data and performs some basic exploratory analyses.  
+
+## Part 1-Simulation Exercise
+This project investigates the exponential distribution in R and compares it with the Central Limit Theorem. The exponential distribution was simulated in R using ‘rexp (n, lambda)’. If you are not sure, exponential distribution has a mean and standard deviation of 1 over lambda (1/ʎ). Lambda was set to (0.2) for all the simulations. This project investigates the distribution of averages of 40 exponentials using a thousand of simulations. 
+This project attempted to answer following questions:
+1.	Does the sample mean vary from the theoretical mean? 
+2.	Calculate the sample variance and compare it with the theoretical variance of the distribution. 
+3.	Check if the distribution is approximately normal.
+The answer to question 3 should focus on the difference between the distribution of a large collection of random exponentials and the distribution of a large collection of averages of 40 exponentials.
+
+#### setting seed for generating data
+```{r,echo=TRUE}
+set.seed(-123)
+```
+
+#### setting up 40 exponential
+```{r}
+n<-40
+```
+
+#### setting lambda to 0.2 for all simulations
+```{r}
+lambda<- 0.2
+```
+
+#### Need 1000 simulations
+```{r}
+S<-1000
+```
+
+#### setting z value for 95% confidence interval (CI)
+```{r}
+z<-1.96
+```
+
+## A.	Simulating data in R and calculating means
+#### Creating dataframe with 40 columns and 1000 exponential simulations
+```{r}
+mydata<-matrix(rexp(n*S,lambda),nrow=S)
+```
+
+#### Checking if the data frame is created
+```{r}
+str(mydata)
+```
+
+# B.	Calculating Sample Mean and Theoretical Mean Using Simulated Data
+#### Mean of simulated data per row 
+```{r}
+Row_Mean<-rowMeans(mydata)
+```
+
+#### Checking if that works
+```{r}
+summary(Row_Mean)
+```
+
+#### Single mean of all row means
+```{r}
+MeanOfMean<-mean(Row_Mean)
+```
+
+#### Printing the Simulated Mean
+```{r}
+MeanOfMean
+```
+
+#### Calculating Theoretical Mean 
+```{r}
+theoreticalMean<-1/lambda
+```
+
+#### Printing the Theoretical Mean
+```{r}
+theoreticalMean
+```
+
+## C.	Calculating Sample Variance and Theoretical Variance Using Simulated Data
+```{r}
+sampleVar<-var(Row_Mean)
+```
+
+#### printing the sample variance
+```{r}
+sampleVar
+```
+
+#### Calculating the theoretical variance
+```{r}
+theoreticalVar<-(1/lambda)^2/(n)
+```
+
+#### Printing the theoretical variance
+```{r}
+theoreticalVar
+```
+
+## D.	Checking Data Distribution and Assessing if they are Approximately Normal
+#### Histogram of the sample mean
+```{r}
+par(bg='grey')
+hist(Row_Mean, 
+     main="Histogram of Sample Data Distribution",
+     xlab="Mean",
+     xlim=c(2,8),
+     col="darkmagenta",
+     freq=FALSE
+     )
+```
+
+## Part 2-Basic Inferential Statistics
+This second portion of the project analyzes the ToothGrowth data in the R dataset package and performs the following activities:
+
+1.	Basic Exploratory Data Analyses:
+2.	Basic Summary of the Data:
+3.	Use Confidence Intervals (CI) and/or hypothesis tests to compare tooth growth by supp and dose:
+4.	State conclusion and the assumptions needed for conclusion
+
+#### Invoking Required Libraries
+```{r}
+library(ggplot2)
+library(dplyr)
+```
+
+#### Loading Required Datafile
+```{r}
+data(ToothGrowth)
+```
+
+## 1.	Basic Exploratory Data Analyses
+#### a. Quick Checking of Given Dataset
+```{r}
+head(ToothGrowth)
+```
+
+#### b. Checking the structure of the dataset
+```{r}
+str(ToothGrowth)
+```
+
+#### c. Summary of the Dataset
+```{r}
+summary(ToothGrowth)
+```
+
+## 2. Changing dose as a factor 
+```{r}
+ToothGrowth$dose<-as.factor(ToothGrowth$dose)
+```
+
+##### i. Checking if that worked
+```{r}
+head(ToothGrowth$dose)
+```
+
+#### ii. Verifying the mean of the **len** variable by **supplment types**
+```{r}
+SupMean=split(ToothGrowth$len,ToothGrowth$supp)
+sapply(SupMean,mean)
+```
+
+#### iv. Creating box plot of OJ and VC 
+```{r}
+e<-ggplot(aes(x=supp,y=len),data=ToothGrowth)
+```
+
+#### Experimenting the violin plot and Including Boxplot within
+```{r}
+e+geom_violin(aes(fill=supp),trim=FALSE)+
+  geom_boxplot(width=0.4)+scale_fill_manual(values=c("#E7B800", "#FC4E07"))+ geom_jitter(width = 0.1)+xlab("Supplement Type")+ 
+  ylab("Tooth Length")
+```
+
+### Checking the impact of Vitamin C on tooth length
+```{r}
+Mean_dose=split(ToothGrowth$len,ToothGrowth$dose)
+sapply(Mean_dose,mean)
+```
+
+### Plotting the findings
+```{r}
+e+ggtitle("Box-Plot Showing Dose of Supplement Type and Tooth Length")+
+  geom_boxplot(aes(fill=dose))+scale_fill_manual(values=c("#E7B800", 
+              "#FC4E07","#00AFBB"))+xlab("Dose")+ylab("Tooth Length")
+```
+
+### Tooth Length and Delivery Method
+```{r}
+ToothGrowth %>%
+  group_by(supp,dose) %>%
+  summarise(Q25th_len=quantile(len,0.25),
+            Q50th_len=quantile(len,0.5),
+            Q75th_len=quantile(len,0.75),
+            average_lenth=mean(len),
+            SD_len=sd(len))->newtable
+newtable
+```
+
+### Calculating ttest to study the relationship between tooth length, supplement type, and dose
+```{r}
+test=list()
+dose=c(0.5,1,2)
+for(m in dose){
+  Moj=ToothGrowth$len[ToothGrowth$dose==m & ToothGrowth$supp=="OJ"]
+  Mvc=ToothGrowth$len[ToothGrowth$dose==m & ToothGrowth$supp=="VC"]
+  t<-t.test(Moj,Mvc)
+  id<-paste0("OJ","-","VC",",",m)
+  test<-rbind(test,list(id=id,p.value=t$p.value,CI.LOW=t$conf.int[1],
+                          CI.HIGH=t$conf.int[2]))
+}
+test
+```
